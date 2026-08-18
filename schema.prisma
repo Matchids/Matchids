@@ -1,0 +1,304 @@
+// Matchids — Database Schema
+// Kept intentionally simple and evolvable: one table per real-world entity,
+// no speculative fields, no invented relationships to services that don't exist yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  PARENT
+  CHILD
+  DONOR
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  displayName   String
+  role          UserRole  @default(PARENT)
+  locale        String    @default("en") // "en" | "fr" | "ht"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // A parent account can manage child profiles; kept as a simple self-relation
+  // so parental controls have somewhere to live without over-engineering it.
+  parentId      String?
+  parent        User?     @relation("ParentToChild", fields: [parentId], references: [id])
+  children      User[]    @relation("ParentToChild")
+
+  orders        Order[]
+  library       UserLibrary[]
+  donations     Donation[]
+  artworkLikes  ArtworkLike[]
+
+  @@index([role])
+}
+
+model AdminInvite {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  token     String   @unique
+  invitedBy String
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Books
+// ---------------------------------------------------------------------------
+
+enum AccessType {
+  FREE
+  PREMIUM
+}
+
+model Category {
+  id    String @id @default(cuid())
+  slug  String @unique
+  name  String
+  books Book[]
+}
+
+model Book {
+  id               String     @id @default(cuid())
+  title            String
+  description      String
+  author           String
+  language         String     @default("en")
+  ageRangeMin      Int
+  ageRangeMax      Int
+  accessType       AccessType @default(FREE)
+  priceCents       Int        @default(0) // 0 when accessType is FREE
+  currency         String     @default("USD")
+  coverImageUrl    String?
+  pdfFileUrl       String?    // set once the real file is uploaded to storage
+  publishedAt      DateTime?
+  isDemoContent    Boolean    @default(false) // true for seed/demo books only — see src/data
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  categoryId       String?
+  category         Category?  @relation(fields: [categoryId], references: [id])
+
+  orders           OrderItem[]
+  library           UserLibrary[]
+
+  @@index([accessType])
+  @@index([categoryId])
+}
+
+model UserLibrary {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  grantedAt DateTime @default(now())
+  source    String   // "free" | "purchase" | "admin_grant"
+
+  user User @relation(fields: [userId], references: [id])
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@unique([userId, bookId])
+}
+
+// ---------------------------------------------------------------------------
+// Kids Art
+// ---------------------------------------------------------------------------
+
+enum ArtworkCategory {
+  ANIMALS
+  COLORING
+  LEARNING
+  NATURE
+  STORIES
+  FANTASY
+  CREATIVE_ACTIVITIES
+}
+
+model Artwork {
+  id            String          @id @default(cuid())
+  title         String
+  description   String?
+  category      ArtworkCategory
+  imageUrl      String?
+  isDemoContent Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+
+  likes ArtworkLike[]
+
+  @@index([category])
+}
+
+model ArtworkLike {
+  id        String   @id @default(cuid())
+  userId    String
+  artworkId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  artwork Artwork @relation(fields: [artworkId], references: [id])
+
+  @@unique([userId, artworkId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders & Payments (traditional + Web3, kept in separate concerns)
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  status      OrderStatus @default(PENDING)
+  totalCents  Int
+  currency    String      @default("USD")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([status])
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  bookId   String
+  priceCents Int
+
+  order Order @relation(fields: [orderId], references: [id])
+  book  Book  @relation(fields: [bookId], references: [id])
+}
+
+enum PaymentMethodType {
+  CARD_DEBIT
+  CARD_CREDIT
+  CELOHT_CELO
+  CELOHT_USDM
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING_CONFIRMATION
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+// One Payment per Order (or per Donation, see below), holding the
+// provider-agnostic outcome. Provider-specific detail lives in
+// PaymentTransaction so we never conflate "the app's view" with
+// "what a specific processor told us".
+model Payment {
+  id            String            @id @default(cuid())
+  orderId       String?           @unique
+  donationId    String?           @unique
+  methodType    PaymentMethodType
+  status        PaymentStatus     @default(CREATED)
+  amountCents   Int
+  currency      String            @default("USD")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  order        Order?              @relation(fields: [orderId], references: [id])
+  donation     Donation?           @relation(fields: [donationId], references: [id])
+  transactions PaymentTransaction[]
+}
+
+// Raw provider events / confirmations. Never trust the frontend alone —
+// a transaction row is only marked verified once the backend has confirmed
+// it with the provider (card processor webhook, or CeloHT transaction check).
+model PaymentTransaction {
+  id                String   @id @default(cuid())
+  paymentId         String
+  provider          String   // "stripe" | "celoht" | ...
+  providerReference String?  // charge id / tx hash — left null until real, never invented
+  verifiedByBackend Boolean  @default(false)
+  rawEventType      String?
+  createdAt         DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([provider])
+}
+
+// ---------------------------------------------------------------------------
+// Give Back / Donations
+// ---------------------------------------------------------------------------
+
+enum DonationStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+model DonationCampaign {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  isActive    Boolean    @default(false) // stays false until a real campaign is published
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime   @default(now())
+
+  donations Donation[]
+}
+
+model Donation {
+  id          String         @id @default(cuid())
+  userId      String?        // null allowed for guest donations
+  campaignId  String?
+  amountCents Int
+  currency    String         @default("USD")
+  status      DonationStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+
+  user     User?              @relation(fields: [userId], references: [id])
+  campaign DonationCampaign?  @relation(fields: [campaignId], references: [id])
+  payment  Payment?
+
+  @@index([status])
+}
+
+// Verified organizations that receive Give Back support. Empty until
+// Matchids has actually vetted and partnered with one — the app must not
+// render placeholder partners.
+model VerifiedOrganization {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  website     String?
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+}
+
+// Impact reporting is prepared as a structure, populated only from real
+// campaign + donation data — never hand-written numbers.
+model ImpactReport {
+  id           String   @id @default(cuid())
+  campaignId   String?
+  periodStart  DateTime
+  periodEnd    DateTime
+  summary      String
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+}

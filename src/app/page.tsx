@@ -13,26 +13,34 @@ export const metadata: Metadata = {
 const pathways = [
   {
     number: "01",
-    title: "Find a story",
-    text: "Explore a growing library of children's books, with free and premium titles clearly marked.",
+    title: "Learn through stories",
+    text: "Explore books by reading age, language, and access type. Only titles published in Matchids appear in the library.",
     href: "/books",
-    action: "Browse books",
+    action: "Explore the library",
     tone: "pathway-green",
   },
   {
     number: "02",
-    title: "Make something",
-    text: "Try a creative activity designed to invite curiosity, practice, and play.",
+    title: "Imagine freely",
+    text: "Discover creative activities and artwork shared in a thoughtful, family-friendly space.",
     href: "/kids-art",
-    action: "Explore activities",
+    action: "Discover Kids Art",
     tone: "pathway-yellow",
   },
   {
     number: "03",
+    title: "Create with care",
+    text: "Children's work should stay private until it has been reviewed and approved for publication.",
+    href: "/child-safety",
+    action: "Our approach to sharing",
+    tone: "pathway-ink",
+  },
+  {
+    number: "04",
     title: "Give with care",
-    text: "Learn about Matchids' giving mission and how verified contributions will be handled.",
+    text: "Explore Matchids' giving mission. Campaigns and reports appear only when they are verified and published.",
     href: "/give-back",
-    action: "Our approach",
+    action: "Our giving principles",
     tone: "pathway-coral",
   },
 ];
@@ -82,7 +90,7 @@ export default async function HomePage() {
         <div className="page-wrap">
           <div className="section-heading">
             <p className="eyebrow">Explore at your own pace</p>
-            <h2>Three ways to begin</h2>
+            <h2>Learn. Imagine. Create. Give.</h2>
           </div>
           <div className="pathways-grid">
             {pathways.map((item) => (

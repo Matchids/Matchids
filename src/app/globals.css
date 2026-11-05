@@ -158,10 +158,11 @@ button, input, select, textarea { font: inherit; }
 .intro-copy h2, .family-copy h2, .give-strip h2 { margin-bottom: 18px; font-size: clamp(34px, 4vw, 51px); line-height: 1.1; }
 .intro-copy p, .family-copy > p:not(.eyebrow) { margin-bottom: 23px; color: var(--muted); font-size: 16px; line-height: 1.8; }
 .pathways-section { padding-block: 78px 90px; background: #fff; }
-.pathways-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.pathways-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .pathway { min-height: 284px; display: flex; flex-direction: column; padding: 25px; border-top: 5px solid var(--green); background: #f4f6f0; }
 .pathway-yellow { border-color: #d3a80f; background: #fbf7e8; }
 .pathway-coral { border-color: var(--coral); background: #fbf0eb; }
+.pathway-ink { border-color: var(--ink); background: #edf1ef; }
 .pathway-number { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: 1px; }
 .pathway h3 { margin: 24px 0 9px; font-size: 27px; }
 .pathway p { margin-bottom: 20px; color: var(--muted); font-size: 14px; line-height: 1.65; }
@@ -288,6 +289,7 @@ button, input, select, textarea { font: inherit; }
 
 @media (max-width: 1080px) {
   .desktop-nav, .account-links { display: none; }
+  .pathways-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .header-inner { min-height: 68px; }
   .menu-toggle {
     display: inline-flex;

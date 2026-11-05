@@ -20,12 +20,25 @@ describe("payment providers report configuration honestly", () => {
         amountCents: 1000,
         currency: "USD",
       })
-    ).rejects.toThrow(/not configured/i);
+    ).rejects.toThrow(/unavailable/i);
   });
 
   it("StripeProvider is not configured without a secret key", () => {
     delete process.env.STRIPE_SECRET_KEY;
     const provider = new StripeProvider();
     expect(provider.isConfigured()).toBe(false);
+  });
+
+  it("credentials alone do not enable an unimplemented payment provider", () => {
+    process.env.STRIPE_SECRET_KEY = "configured-but-not-integrated";
+    process.env.CELOHT_API_BASE_URL = "https://provider.example.invalid";
+    process.env.CELOHT_API_KEY = "configured-but-not-integrated";
+
+    expect(new StripeProvider().isConfigured()).toBe(false);
+    expect(new CeloHTProvider().isConfigured()).toBe(false);
+
+    delete process.env.STRIPE_SECRET_KEY;
+    delete process.env.CELOHT_API_BASE_URL;
+    delete process.env.CELOHT_API_KEY;
   });
 });

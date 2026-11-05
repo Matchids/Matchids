@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect } from "vitest";
 import { demoBooks } from "@/data/demo-books";
+import { getPublishedBooks } from "@/lib/catalog";
+
+const originalDatabaseUrl = process.env.DATABASE_URL;
+
+afterEach(() => {
+  if (originalDatabaseUrl === undefined) delete process.env.DATABASE_URL;
+  else process.env.DATABASE_URL = originalDatabaseUrl;
+});
 
 describe("demo book data", () => {
   it("marks every entry as demo content", () => {
@@ -16,5 +24,12 @@ describe("demo book data", () => {
         expect(book.priceCents).toBe(0);
       }
     }
+  });
+
+  it("returns clearly marked local sample books when no database is configured", async () => {
+    delete process.env.DATABASE_URL;
+    const books = await getPublishedBooks();
+    expect(books.length).toBeGreaterThan(0);
+    expect(books.every((book) => book.isDemoContent)).toBe(true);
   });
 });

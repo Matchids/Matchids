@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-import { demoBooks } from "../src/data/demo-books";
-import { demoArtworks } from "../src/data/demo-artworks";
-
-const prisma = new PrismaClient();
+import { prisma } from "./src/lib/db/prisma";
+import { demoBooks } from "./src/data/demo-books";
+import { demoArtworks } from "./src/data/demo-artworks";
 
 /**
  * Seeds ONLY demo/dev content, and refuses to run in production so a real

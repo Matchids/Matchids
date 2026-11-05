@@ -1,44 +1,27 @@
 # CeloHT Integration
 
-## What CeloHT is
+## Current state
 
-CeloHT is a dapp that lets people send and receive **CELO** and **USDm** on
-the **Celo blockchain**. In Matchids, CeloHT is treated as a Web3 payment
-provider — one option among several, alongside traditional card payments —
-for both premium book purchases and Give Back donations.
+CeloHT is intended to be a payment provider for CELO and USDm on Celo. The available Matchids sources contain no verified CeloHT endpoint, API contract, smart contract address, ABI, RPC configuration, or transaction lookup procedure.
 
-## Where it lives in the codebase
+The provider boundary is `src/lib/payments/providers/CeloHTProvider.ts`. It currently returns `isConfigured() === false` unconditionally. Environment variables alone do not enable it. Payment intent routes return `503`, no payment or donation records are created, and no frontend action can mark a transaction successful.
 
-- `src/lib/payments/providers/CeloHTProvider.ts` — implements the shared
-  `PaymentProvider` interface (`src/lib/payments/types.ts`).
-- `src/app/api/payments/celoht/route.ts` — backend route that creates a
-  CeloHT payment intent.
-- `src/app/api/payments/webhook/route.ts` — shared confirmation endpoint;
-  CeloHT transactions are verified here (or via a CeloHT-specific callback)
-  before Matchids treats a purchase or donation as paid.
+## Required before implementation
 
-## What is real vs. what is a placeholder
+Obtain official integration documentation covering:
 
-Nothing invented: no contract address, ABI, RPC endpoint, or CeloHT API
-route appears anywhere in this repository. `CeloHTProvider.isConfigured()`
-checks for `CELOHT_API_BASE_URL` and `CELOHT_API_KEY` (see `.env.example`)
-— until both are set to real values, the provider reports itself as not
-configured, `createIntent()` throws a clear error, and the CeloHT payment
-option is shown as "coming soon" in the UI rather than being offered as if
-it works.
+- Intent creation and supported purpose/amount/currency fields.
+- CELO and USDm token identifiers and supported network(s).
+- Signed callback/webhook format, signing key rotation, and replay protection.
+- Transaction lookup/finality rules and refund/cancellation behavior.
+- Sandbox/testnet credentials and a test procedure.
 
-## What to do when the real integration details are available
+Do not add contract addresses, APIs, or credentials from assumptions. Keep provider-specific behavior inside the CeloHT adapter and verify every transaction on the server before granting book access or confirming a donation.
 
-1. Fill in `CELOHT_API_BASE_URL` and `CELOHT_API_KEY` in `.env`.
-2. In `CeloHTProvider.createIntent()`, call CeloHT's real API to create a
-   payment request for CELO or USDm, returning whatever the checkout UI
-   needs to complete payment (address + amount, signed link, QR code,
-   etc. — depends on what CeloHT's API actually returns).
-3. In `CeloHTProvider.verifyTransaction()`, verify the transaction against
-   the Celo blockchain or CeloHT's own verification endpoint. This must
-   run server-side only.
-4. Remove the "coming soon" label from the CeloHT option once end-to-end
-   testing confirms a real payment can be created and verified.
+## Configuration
 
-No other file needs to change — `PaymentService` and checkout code already
-treat CeloHT as a first-class provider.
+Set `CELOHT_API_BASE_URL`, `CELOHT_API_KEY`, `CELOHT_NETWORK`, and any verified webhook secret only after CeloHT supplies the corresponding real values. Secrets must remain server-side. The current adapter remains unavailable until its implementation and tests exist, even if those environment values are present.
+
+## Verification gate
+
+Before enabling CeloHT, add unit tests for request validation and signature/replay handling, provider integration tests against the official sandbox, and end-to-end tests proving that invalid or unfinalized transactions never mark an order or donation confirmed.

@@ -1,128 +1,94 @@
 # Matchids
 
-**A Digital World Where Children Learn, Imagine, Create and Give**
+**A digital world where children learn, imagine, create, and give.**
 
-Matchids is an international digital platform for children, parents and
-communities — built around a growing library of free and premium books, a
-Kids Art creative space, and a Give Back program supporting children in
-orphanages who need it most.
+Matchids is a family-focused learning and creativity platform founded by Suzie Matchilda George. This repository is the single application repository for the website, API routes, database schema, authentication, and payment-provider boundary.
 
-Founded by **Suzie Matchilda George**.
+## Current status
 
-## Vision
+The public website and core application foundations are implemented, but this repository is **not production-ready**. Published database content, account flows, and admin authorization require a configured PostgreSQL database. Online purchases, donations, contact delivery, uploads, and content-management actions remain unavailable until their real providers and server-side workflows are implemented and verified.
 
-Matchids brings together:
+Sample books are local-development fixtures, labeled as samples. Sample art is not published. No fake products, orders, payments, donations, partners, or impact figures are included.
 
-- **Learn** — a digital book library, free and premium, organized by age,
-  category and language
-- **Imagine** — Kids Art: coloring pages, activities and creative prompts
-- **Create** — a platform designed to grow with real content, not
-  placeholders
-- **Give** — the Give Back program, directing support toward children in
-  orphanages, built openly and only ever reporting real, verified data
+## Repository scope
 
-## Features
+The GitHub Matchids namespace currently exposes this `Matchids/Matchids` application repository and the shared `.github` repository. The organization profile describes other possible repositories as an ecosystem plan, but those repositories are not currently available. The shared profile references the official Matchids logo; that existing asset is centralized in `public/logo/`.
 
-| Area | Status |
-|---|---|
-| Book library (browse, search, filter, detail pages) | Implemented, seeded with demo content |
-| Free vs. premium access | Implemented |
-| Kids Art | Implemented, seeded with demo content |
-| Give Back / donation flow | Implemented (payment confirmation pending real processor) |
-| Card payments | Architecture in place; processor SDK is an integration point |
-| CeloHT (CELO / USDm on Celo) | Architecture in place; API is an integration point — see [`docs/CELOHT_INTEGRATION.md`](docs/CELOHT_INTEGRATION.md) |
-| User accounts & library | Architecture + schema in place |
-| Admin dashboard | Route structure in place; needs real auth gating + data wiring |
-| i18n (English / French / Haitian Creole) | Locale field on User; UI copy currently English-only, structured to translate |
+## Architecture
 
-## Technology stack
+```text
+src/app/                 Next.js routes, pages, API handlers, metadata
+src/components/          Shared navigation, catalog, account, and cart UI
+src/lib/auth/            Password and session primitives; user lookup
+src/lib/db/              Prisma singleton
+src/lib/payments/        Provider interface and orchestration
+payments/card/           Card-provider boundary (currently unavailable)
+payments/celoht/         CeloHT boundary (currently unavailable)
+src/data/                Clearly marked local demo fixtures
+schema.prisma            PostgreSQL schema (Prisma)
+public/logo/             Official Matchids logo asset
+database/                Migration and database rollout notes
+```
 
-- **Next.js 14** (App Router) + **TypeScript**
-- **Tailwind CSS**
-- **PostgreSQL** + **Prisma ORM**
-- **Vitest** for tests
-- Deployable to any Node-compatible host (Vercel, Render, Fly, etc.)
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full breakdown.
+The project uses Next.js 14 App Router, TypeScript, Tailwind CSS, Prisma/PostgreSQL, and Vitest. The schema remains at the repository root to preserve its existing Prisma entry point.
 
 ## Local development
 
+Prerequisites: Node.js 24 and npm. Copy `.env.example` to `.env`, set a local PostgreSQL `DATABASE_URL`, and generate an `AUTH_SECRET` with at least 32 characters:
+
 ```bash
-git clone https://github.com/<your-org>/matchids.git
-cd matchids
-cp .env.example .env      # fill in what you have; see comments in the file
+cp .env.example .env
+openssl rand -base64 32
 npm install
 npm run db:generate
-npm run db:push           # requires a running Postgres instance
+npm run db:push
+npm run db:seed
 npm run dev
 ```
 
-The app runs at `http://localhost:3000`.
+`db:push` is for a disposable local development database only. Do not use it to update production. `db:seed` refuses to run when `NODE_ENV=production` and inserts only clearly marked demo records. The website is available at `http://localhost:3000`.
 
-### Environment variables
-
-All configuration lives in `.env` (see `.env.example` for the full list
-with explanations). Nothing in this repository ships with real secrets —
-card processor keys and CeloHT credentials are integration points you fill
-in yourself.
-
-### Testing
-
-```bash
-npm test          # run once
-npm run test:watch
-```
-
-### Linting & type checking
+## Quality checks
 
 ```bash
 npm run lint
 npm run typecheck
-```
-
-### Build
-
-```bash
+npm test
 npm run build
-npm start
 ```
 
-## Deployment
+The GitHub Actions workflow runs these checks with `npm ci`. Keep `package-lock.json` committed and updated with dependency changes so local, CI, and production installs resolve the same versions.
 
-Any Node 18+ host works. Set the environment variables from `.env.example`
-in your hosting provider, point `DATABASE_URL` at a production Postgres
-instance, and run `npm run build && npm start` (or use the platform's
-Next.js integration, e.g. Vercel).
+## Configuration and launch blockers
 
-## Security
+| Service | Missing | Why it is required | Configuration and verification |
+|---|---|---|---|
+| PostgreSQL | A provisioned database and reviewed migration baseline | Accounts, published catalog, products, and admin roles are database-backed | Set `DATABASE_URL`; migrate a staging database and verify reads/writes before production |
+| Card payments | Processor SDK, webhook signature verification, refunds, and sandbox credentials | A secret key alone cannot create or verify an order payment | Choose a processor, implement its server adapter, configure the `STRIPE_*` values, and test signed sandbox events end to end |
+| CeloHT | Real API details and server-side transaction verification | No endpoint, contract, ABI, or verification behavior is present in the available sources | Obtain official integration documentation, configure `CELOHT_*`, and test CELO/USDm on an approved test environment; current provider always reports unavailable |
+| Email/contact | Verified sender, delivery provider, abuse controls, and support inbox | Contact, verification, and recovery messages must be delivered and handled | Configure `EMAIL_FROM_ADDRESS` and `EMAIL_PROVIDER_API_KEY`, then verify delivery and failure handling |
+| File storage | Private object storage, signed uploads/downloads, and file scanning | Book files and child-related artwork must not be exposed through unsafe uploads | Configure a storage provider and test authorization, content-type limits, scanning, and deletion |
+| Admin operations | Secure admin provisioning and management UI/API | Hiding a link is not authorization; content needs a real moderation workflow | Provision an ADMIN role through a controlled database procedure; implement and test audited management actions |
+| Abuse protection | Distributed rate limiting and account recovery/verification | Authentication endpoints are not protected by a shared rate limiter; no email verification or password reset exists | Add an edge/shared rate-limit store and email flows; test brute-force and recovery paths |
+| Legal/privacy | Jurisdiction-reviewed terms and child privacy notices | The current policy pages are prelaunch drafts, not legal advice | Obtain qualified review and publish region-specific notices before serving families |
+| Brand metadata | Production domain and optimized logo variants | Canonical URLs and social sharing need the verified production domain | Set `NEXT_PUBLIC_APP_URL`; the original official logo is used pending approved optimized variants |
 
-- No secrets, API keys, or private wallet keys are committed to this
-  repository — see `.gitignore` and `.env.example`.
-- Payment verification always happens server-side (see
-  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#payment-architecture)) —
-  the frontend is never trusted to declare a payment successful.
-- Report vulnerabilities per [`.github/SECURITY.md`](.github/SECURITY.md).
+The migration folder is intentionally not fabricated: no production database or prior migration history was available to baseline. Read [`database/README.md`](database/README.md) before creating or applying migrations.
 
-## Payment architecture
+## Security notes
 
-Card and Web3 (CeloHT) payments share one provider-agnostic interface, so
-new payment methods can be added without touching checkout logic. Full
-details in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+- Parent/guardian signup only; no child profile fields or public child profiles.
+- Passwords use bcrypt; session cookies are `httpOnly`, `sameSite=lax`, and secure in production.
+- Admin pages query the current database role on the server.
+- Payment providers are unavailable until their intent and verification implementations exist; frontend input never marks a payment successful.
+- Public artwork queries require `PUBLISHED` status and exclude demo content.
+- No file upload, third-party advertising, or child-to-child messaging feature is enabled.
+- Authentication rate limiting, email verification, password recovery, and a completed production security review remain launch blockers.
 
-## CeloHT integration
+## Payments
 
-CeloHT is a dapp for sending and receiving CELO and USDm on the Celo
-blockchain, integrated as a Web3 payment provider. See
-[`docs/CELOHT_INTEGRATION.md`](docs/CELOHT_INTEGRATION.md) for exactly
-what's implemented, what's a placeholder, and what to fill in once real
-API details are available.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). In short: never commit secrets,
-never invent data (statistics, testimonials, partners, contract addresses),
-and keep content appropriate for children.
+The provider interface supports card and CeloHT adapters. The CeloHT strategy is CELO and USDm; cUSD is not configured. Both provider implementations currently return unavailable and the API refuses to create intents. See [`CELOHT_INTEGRATION.md`](CELOHT_INTEGRATION.md).
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](LICENSE).

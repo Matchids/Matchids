@@ -1,0 +1,1 @@
+export { CeloHTProvider } from "../../../../payments/celoht/CeloHTProvider";

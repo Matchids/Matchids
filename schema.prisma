@@ -126,14 +126,23 @@ enum ArtworkCategory {
   CREATIVE_ACTIVITIES
 }
 
+enum ContentStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
 model Artwork {
   id            String          @id @default(cuid())
   title         String
   description   String?
   category      ArtworkCategory
   imageUrl      String?
+  status        ContentStatus   @default(DRAFT)
   isDemoContent Boolean         @default(false)
   createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   likes ArtworkLike[]
 
@@ -174,6 +183,7 @@ model Order {
 
   user    User        @relation(fields: [userId], references: [id])
   items   OrderItem[]
+  productItems ProductOrderItem[]
   payment Payment?
 
   @@index([status])
@@ -301,4 +311,36 @@ model ImpactReport {
   summary      String
   publishedAt  DateTime?
   createdAt    DateTime @default(now())
+}
+
+model Product {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  priceCents    Int
+  currency      String        @default("USD")
+  imageUrl      String?
+  stockQuantity Int           @default(0)
+  isAvailable   Boolean       @default(false)
+  status        ContentStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  orderItems ProductOrderItem[]
+
+  @@index([status, isAvailable])
+}
+
+model ProductOrderItem {
+  id             String @id @default(cuid())
+  orderId        String
+  productId      String
+  quantity       Int    @default(1)
+  unitPriceCents Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
 }

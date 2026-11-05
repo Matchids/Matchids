@@ -54,7 +54,7 @@ export default async function HomePage() {
         <div className="page-wrap hero-layout">
           <div className="hero-copy">
             <p className="eyebrow">A world made for growing minds</p>
-            <h1>Room to wonder.<br />Stories to share.</h1>
+            <h1>Room to wonder.</h1>
             <p className="hero-description">
               Matchids brings books, creative activities, and a spirit of giving together for children and the grown-ups who care for them.
             </p>

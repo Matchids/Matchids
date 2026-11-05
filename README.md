@@ -63,6 +63,10 @@ The GitHub Actions workflow runs these checks with `npm ci`. Keep `package-lock.
 
 The repository deploys a static public preview from [`github-pages/`](github-pages/) to https://matchids.github.io/Matchids/. A push to `main` that changes the preview, its logo assets, or its deployment workflow triggers the Pages workflow. The Next.js application remains the full server-backed product; GitHub Pages cannot run its database, authentication, payment, or API routes. The preview calls out those unavailable services and does not simulate sign-in, purchases, or donations. Check the `Deploy Matchids to GitHub Pages` workflow in Actions for the deployment result.
 
+## Runtime health checks
+
+On a Node.js deployment, `GET /health` is a liveness probe and returns only a generic process status. `GET /ready` checks PostgreSQL with a minimal query and returns `503` without exposing connection details when the database is unavailable. GitHub Pages is static and cannot serve either route.
+
 ## Configuration and launch blockers
 
 | Service | Missing | Why it is required | Configuration and verification |

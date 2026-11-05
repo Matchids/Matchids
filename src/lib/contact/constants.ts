@@ -1,0 +1,1 @@
+export const OFFICIAL_CONTACT_EMAIL = "matchids911@gmail.com";

@@ -74,7 +74,7 @@ On a Node.js deployment, `GET /health` is a liveness probe and returns only a ge
 | PostgreSQL | A provisioned database and reviewed migration baseline | Accounts, published catalog, products, and admin roles are database-backed | Set `DATABASE_URL`; migrate a staging database and verify reads/writes before production |
 | Card payments | Processor SDK, webhook signature verification, refunds, and sandbox credentials | A secret key alone cannot create or verify an order payment | Choose a processor, implement its server adapter, configure the `STRIPE_*` values, and test signed sandbox events end to end |
 | CeloHT | Real API details and server-side transaction verification | No endpoint, contract, ABI, or verification behavior is present in the available sources | Obtain official integration documentation, configure `CELOHT_*`, and test CELO/USDm on an approved test environment; current provider always reports unavailable |
-| Email/contact | Verified sender, delivery provider, abuse controls, and support inbox | Contact, verification, and recovery messages must be delivered and handled | Configure `EMAIL_FROM_ADDRESS` and `EMAIL_PROVIDER_API_KEY`, then verify delivery and failure handling |
+| Email/contact | SMTP host, credentials, verified sender, contact DB migration, and trusted proxy configuration for IP limiting | Contact messages must be stored privately and notifications relayed without exposing credentials | Set `MATCHIDS_CONTACT_EMAIL`, `CONTACT_RATE_LIMIT_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and verified `EMAIL_FROM_ADDRESS`; configure `CONTACT_TRUSTED_IP_HEADER` only if the proxy overwrites it, then test SMTP delivery |
 | File storage | Private object storage, signed uploads/downloads, and file scanning | Book files and child-related artwork must not be exposed through unsafe uploads | Configure a storage provider and test authorization, content-type limits, scanning, and deletion |
 | Admin operations | Secure admin provisioning and management UI/API | Hiding a link is not authorization; content needs a real moderation workflow | Provision an ADMIN role through a controlled database procedure; implement and test audited management actions |
 | Abuse protection | Distributed rate limiting and account recovery/verification | Authentication endpoints are not protected by a shared rate limiter; no email verification or password reset exists | Add an edge/shared rate-limit store and email flows; test brute-force and recovery paths |
@@ -82,6 +82,8 @@ On a Node.js deployment, `GET /health` is a liveness probe and returns only a ge
 | Brand metadata | Production domain and optimized logo variants | Canonical URLs and social sharing need the verified production domain | Set `NEXT_PUBLIC_APP_URL`; the original official logo is used pending approved optimized variants |
 
 The migration folder is intentionally not fabricated: no production database or prior migration history was available to baseline. Read [`database/README.md`](database/README.md) before creating or applying migrations.
+
+The contact form stores submissions in the `ContactMessage` table before attempting SMTP notification. If SMTP is missing or fails, the visitor is told the message was saved but notification could not be sent; the official `matchids911@gmail.com` address remains available as a `mailto:` fallback. Admin message access requires the existing `ADMIN` role. Apply the additive migration only after reviewing the target database and its migration history.
 
 ## Security notes
 

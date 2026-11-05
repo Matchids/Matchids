@@ -344,3 +344,37 @@ model ProductOrderItem {
   @@index([orderId])
   @@index([productId])
 }
+
+enum ContactMessageStatus {
+  NEW
+  IN_PROGRESS
+  REPLIED
+  ARCHIVED
+}
+
+enum ContactNotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model ContactMessage {
+  id                     String                    @id @default(cuid())
+  name                   String
+  senderEmail            String
+  subject                String
+  message                String                    @db.Text
+  sourceHash             String
+  isRead                 Boolean                   @default(false)
+  status                 ContactMessageStatus      @default(NEW)
+  notificationStatus     ContactNotificationStatus @default(PENDING)
+  replyReference         String?
+  repliedAt              DateTime?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([isRead, createdAt])
+  @@index([sourceHash, createdAt])
+  @@index([senderEmail, createdAt])
+}

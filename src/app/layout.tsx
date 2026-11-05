@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Footer, Header } from "@/components/site-shell";
+import { getSiteOrigin } from "@/lib/site-origin";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const siteOrigin = getSiteOrigin();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  ...(siteOrigin ? { metadataBase: siteOrigin } : {}),
   title: {
     default: "Matchids | Learn, imagine, create, give",
     template: "%s | Matchids",
@@ -25,14 +26,16 @@ export const metadata: Metadata = {
       "A welcoming space for children and families to discover books, creative activities, and ways to give back.",
     siteName: "Matchids",
     type: "website",
-    images: [{ url: "/logo/matchids-logo.png", width: 1254, height: 1254, alt: "Official Matchids logo" }],
+    ...(siteOrigin ? {
+      images: [{ url: "/logo/matchids-logo.png", width: 1254, height: 1254, alt: "Official Matchids logo" }],
+    } : {}),
   },
   twitter: {
     card: "summary",
     title: "Matchids | Learn, imagine, create, give",
     description:
       "A welcoming space for children and families to discover books, creative activities, and ways to give back.",
-    images: ["/logo/matchids-logo.png"],
+    ...(siteOrigin ? { images: ["/logo/matchids-logo.png"] } : {}),
   },
 };
 

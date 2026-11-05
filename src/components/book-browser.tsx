@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { BookCard } from "@/components/book-card";
 import type { CatalogBook } from "@/lib/catalog";
+import { paginateItems } from "@/lib/catalog-pagination";
+
+const PAGE_SIZE = 12;
 
 export function BookBrowser({ books }: { books: CatalogBook[] }) {
   const [query, setQuery] = useState("");
@@ -10,6 +13,7 @@ export function BookBrowser({ books }: { books: CatalogBook[] }) {
   const [language, setLanguage] = useState("all");
   const [age, setAge] = useState("all");
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(1);
   const categories = [...new Set(books.map((book) => book.category))].sort();
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -23,17 +27,22 @@ export function BookBrowser({ books }: { books: CatalogBook[] }) {
     const matchesCategory = category === "all" || book.category === category;
     return matchesQuery && matchesAccess && matchesLanguage && matchesAge && matchesCategory;
   });
+  const pageResult = paginateItems(filteredBooks, page, PAGE_SIZE);
+
+  function resetPage() {
+    setPage(1);
+  }
 
   return (
     <>
       <div className="catalog-controls" role="search">
         <label className="search-control">
           <span>Search books</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title, author, or topic" />
+          <input value={query} onChange={(event) => { setQuery(event.target.value); resetPage(); }} placeholder="Title, author, or topic" />
         </label>
         <label>
           <span>Access</span>
-          <select value={access} onChange={(event) => setAccess(event.target.value)}>
+          <select value={access} onChange={(event) => { setAccess(event.target.value); resetPage(); }}>
             <option value="all">All books</option>
             <option value="FREE">Free</option>
             <option value="PREMIUM">Premium</option>
@@ -41,7 +50,7 @@ export function BookBrowser({ books }: { books: CatalogBook[] }) {
         </label>
         <label>
           <span>Age</span>
-          <select value={age} onChange={(event) => setAge(event.target.value)}>
+          <select value={age} onChange={(event) => { setAge(event.target.value); resetPage(); }}>
             <option value="all">All ages</option>
             <option value="younger">Up to 6</option>
             <option value="older">7 and up</option>
@@ -49,14 +58,14 @@ export function BookBrowser({ books }: { books: CatalogBook[] }) {
         </label>
         <label>
           <span>Category</span>
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select value={category} onChange={(event) => { setCategory(event.target.value); resetPage(); }}>
             <option value="all">All categories</option>
             {categories.map((item) => <option value={item} key={item}>{item}</option>)}
           </select>
         </label>
         <label>
           <span>Language</span>
-          <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select value={language} onChange={(event) => { setLanguage(event.target.value); resetPage(); }}>
             <option value="all">All languages</option>
             <option value="en">English</option>
             <option value="fr">French</option>
@@ -66,9 +75,25 @@ export function BookBrowser({ books }: { books: CatalogBook[] }) {
       </div>
 
       {filteredBooks.length ? (
-        <div className="book-grid">
-          {filteredBooks.map((book) => <BookCard key={book.id} book={book} />)}
-        </div>
+        <>
+          <p className="catalog-result-count" aria-live="polite">
+            Showing {((pageResult.page - 1) * pageResult.pageSize) + 1}–{Math.min(pageResult.page * pageResult.pageSize, pageResult.totalItems)} of {pageResult.totalItems} books
+          </p>
+          <div className="book-grid">
+            {pageResult.items.map((book) => <BookCard key={book.id} book={book} />)}
+          </div>
+          {pageResult.totalPages > 1 && (
+            <nav className="catalog-pagination" aria-label="Book results pages">
+              <button type="button" onClick={() => setPage(pageResult.page - 1)} disabled={pageResult.page === 1}>
+                Previous
+              </button>
+              <span aria-current="page">Page {pageResult.page} of {pageResult.totalPages}</span>
+              <button type="button" onClick={() => setPage(pageResult.page + 1)} disabled={pageResult.page === pageResult.totalPages}>
+                Next
+              </button>
+            </nav>
+          )}
+        </>
       ) : (
         <div className="empty-state">
           <h2>{books.length ? "No books match those filters" : "The shelves are being prepared"}</h2>

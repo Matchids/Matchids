@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getContactRecipient } from "@/lib/contact/config";
 
 export const metadata: Metadata = { title: "Frequently Asked Questions", alternates: { canonical: "/faq" } };
 
@@ -10,6 +11,8 @@ const questions = [
 ];
 
 export default function FaqPage() {
+  const contactEmail = getContactRecipient();
+
   return (
     <section className="page-wrap content-page">
       <p className="eyebrow">Support</p>
@@ -22,6 +25,9 @@ export default function FaqPage() {
           </details>
         ))}
       </div>
+      <p className="contact-note">
+        Need help? <a href={`mailto:${contactEmail}`}>Contact Matchids at {contactEmail}</a>.
+      </p>
     </section>
   );
 }
